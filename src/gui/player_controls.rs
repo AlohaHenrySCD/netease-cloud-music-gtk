@@ -55,14 +55,12 @@ impl PlayerControls {
     fn setup_settings(&self) {
         let settings = Settings::new(crate::APP_ID);
 
-        self.imp()
-            .volume_button
-            .set_icons(&[
-                "audio-volume-muted-symbolic",
-                "audio-volume-high-symbolic",
-                "audio-volume-low-symbolic",
-                "audio-volume-medium-symbolic",
-            ]);
+        self.imp().volume_button.set_icons(&[
+            "audio-volume-muted-symbolic",
+            "audio-volume-high-symbolic",
+            "audio-volume-low-symbolic",
+            "audio-volume-medium-symbolic",
+        ]);
 
         self.imp()
             .settings
@@ -614,7 +612,10 @@ impl PlayerControls {
     // 心动模式开启/关闭时更新按钮状态（开启红心高亮）
     pub fn set_heartbeat_active(&self, active: bool) {
         if active {
-            self.imp().moved_button.get().add_css_class("heartbeat-active");
+            self.imp()
+                .moved_button
+                .get()
+                .add_css_class("heartbeat-active");
         } else {
             self.imp()
                 .moved_button
@@ -910,7 +911,7 @@ impl PlayerControls {
         match name {
             "volume" => {
                 let value = self.property::<f64>("volume");
-                self.imp().volume_button.get().set_value(value);
+                self.imp().volume_button.get().set_value(value * 10.0);
                 if let Some(mpris) = imp.mpris.get() {
                     crate::MAINCONTEXT.spawn_local_with_priority(
                         Priority::LOW,
@@ -976,7 +977,7 @@ impl Default for PlayerControls {
 impl PlayerControls {
     #[template_callback]
     fn volume_cb(&self, adj: Adjustment) {
-        self.set_volume(adj.value());
+        self.set_volume(adj.value() / 10.0);
     }
 
     #[template_callback]
@@ -1189,7 +1190,11 @@ mod imp {
         fn next_button_clicked_cb(&self) {
             let sender = self.sender.get().unwrap().clone();
             let (loops, pos_before, len) = if let Ok(playlist) = self.playlist.lock() {
-                (playlist.get_loops(), playlist.get_position(), playlist.len())
+                (
+                    playlist.get_loops(),
+                    playlist.get_position(),
+                    playlist.len(),
+                )
             } else {
                 (LoopsState::None, 0, 0)
             };
@@ -1225,7 +1230,10 @@ mod imp {
                     if let Some(si) = playlist.current_song().map(|s| s.to_owned()) {
                         // 不循环模式播完：追加心动歌曲并自动续播
                         sender
-                            .send_blocking(Action::HeartbeatExtend(si, HeartbeatExtendMode::ListEnd))
+                            .send_blocking(Action::HeartbeatExtend(
+                                si,
+                                HeartbeatExtendMode::ListEnd,
+                            ))
                             .unwrap();
                         return;
                     }
